@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Meal Tracker</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header>
+    <h1>Weekly Meal Tracker 🍽️</h1>
+  </header>
+
+  <div id="weekContainer"></div>
+
+  <div class="export-buttons">
+    <button onclick="exportToTXT()">Export as TXT</button>
+    <button onclick="exportToDOCX()">Export as DOCX</button>
+  </div>
+
+  <canvas id="spendingChart" style="max-width: 600px; margin: 40px auto;"></canvas>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/docx/7.7.0/docx.umd.min.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
