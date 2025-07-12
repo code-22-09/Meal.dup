@@ -1,127 +1,133 @@
-const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
-const weekContainer = document.getElementById("weekContainer");
-const dailyTotals = {};
+let currentDay = 1;
+const meals = ["Breakfast", "Lunch", "Mid-afternoon", "Supper"];
+let allData = [];
 
-days.forEach(day => {
-  const section = document.createElement("div");
-  section.className = "day-section";
-  section.innerHTML = `
-    <h2>${day}</h2>
-    <input type="text" placeholder="Meal description" id="${day}-meal">
-    <input type="number" placeholder="Cost" id="${day}-cost">
-    <button onclick="addMeal('${day}')">Add Meal</button>
-    <div id="${day}-meals"></div>
-  `;
-  weekContainer.appendChild(section);
-  dailyTotals[day] = 0;
-});
+function addDay() {
+  const container = document.getElementById("daysContainer");
 
-function addMeal(day) {
-  const descInput = document.getElementById(`${day}-meal`);
-  const costInput = document.getElementById(`${day}-cost`);
-  const mealContainer = document.getElementById(`${day}-meals`);
+  const dayDiv = document.createElement("div");
+  dayDiv.className = "day-section";
+  dayDiv.id = `day-${currentDay}`;
 
-  const description = descInput.value.trim();
-  const cost = parseFloat(costInput.value);
+  const header = document.createElement("h2");
+  header.textContent = `Day ${currentDay}`;
+  dayDiv.appendChild(header);
 
-  if (!description || isNaN(cost)) return;
+  meals.forEach(meal => {
+    const mealGroup = document.createElement("div");
+    mealGroup.className = "meal-group";
 
-  const mealDiv = document.createElement("div");
-  mealDiv.className = "meal";
-  const time = new Date().toLocaleTimeString();
-  mealDiv.textContent = `${time} - ${description} ($${cost.toFixed(2)})`;
-  mealContainer.appendChild(mealDiv);
+    const label = document.createElement("label");
+    label.textContent = `${meal}:`;
 
-  dailyTotals[day] += cost;
+    const input = document.createElement("input");
+    input.type = "text";
+    input.placeholder = `Enter ${meal} + cost (e.g. Rice - 120)`;
+    input.dataset.meal = meal;
+    input.dataset.day = currentDay;
 
-  descInput.value = "";
-  costInput.value = "";
+    mealGroup.appendChild(label);
+    mealGroup.appendChild(input);
+    dayDiv.appendChild(mealGroup);
+  });
+
+  const addBtn = document.createElement("button");
+  addBtn.textContent = "Add Meal";
+  addBtn.className = "add-btn";
+  addBtn.onclick = () => saveDayData(currentDay);
+  dayDiv.appendChild(addBtn);
+
+  container.appendChild(dayDiv);
+  currentDay++;
 }
 
-function exportToTXT() {
-  let content = `Meal Tracker - ${new Date().toLocaleString()}\n\n`;
-  days.forEach(day => {
-    content += `${day}:\n`;
-    const meals = document.getElementById(`${day}-meals`).children;
-    for (let meal of meals) {
-      content += `  - ${meal.textContent}\n`;
+function saveDayData(day) {
+  const inputs = document.querySelectorAll(`input[data-day='${day}']`);
+  const dayData = { day: `Day ${day}`, meals: [], total: 0 };
+
+  inputs.forEach(input => {
+    const value = input.value.trim();
+    if (value) {
+      const [desc, cost] = value.split("-").map(str => str.trim());
+      const amount = parseFloat(cost) || 0;
+      dayData.meals.push({ type: input.dataset.meal, description: desc, cost: amount });
+      dayData.total += amount;
     }
-    content += `  Total: $${dailyTotals[day].toFixed(2)}\n\n`;
+  });
+
+  allData = allData.filter(d => d.day !== `Day ${day}`);
+  allData.push(dayData);
+  alert(`Saved Day ${day} Meals ✅`);
+}
+
+function exportTXT() {
+  let content = "";
+  allData.forEach(day => {
+    content += `${day.day}\n`;
+    day.meals.forEach(meal => {
+      content += `  ${meal.type}: ${meal.description} - ${meal.cost} KES\n`;
+    });
+    content += `  Total: ${day.total} KES\n\n`;
   });
 
   const blob = new Blob([content], { type: "text/plain" });
-  const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
-  a.href = url;
-  a.download = `meal-tracker-${Date.now()}.txt`;
+  a.href = URL.createObjectURL(blob);
+  a.download = `Meal_Report_${new Date().toISOString().slice(0,10)}.txt`;
   a.click();
 }
 
-function exportToDOCX() {
-  const { Document, Packer, Paragraph, TextRun } = window.docx;
-  const doc = new Document();
+async function exportDOCX() {
+  const chartCanvas = document.getElementById("spendingChart");
+  const ctx = chartCanvas.getContext("2d");
+  chartCanvas.style.display = "block";
 
-  doc.addSection({
-    children: [
-      new Paragraph({
-        children: [
-          new TextRun({ text: `Meal Tracker - ${new Date().toLocaleString()}`, bold: true, size: 28 }),
-        ],
-      }),
-      ...days.map(day => new Paragraph({
-        children: [
-          new TextRun({ text: `\n${day}`, bold: true, size: 24 }),
-          ...Array.from(document.getElementById(`${day}-meals`).children).map(meal => 
-            new TextRun({ text: `\n - ${meal.textContent}`, size: 20 })
-          ),
-          new TextRun({ text: `\n Total: $${dailyTotals[day].toFixed(2)}\n`, italics: true, size: 20 }),
-        ],
-      }))
-    ],
-  });
+  const labels = allData.map(d => d.day);
+  const data = allData.map(d => d.total);
 
-  Packer.toBlob(doc).then(blob => {
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `meal-tracker-${Date.now()}.docx`;
-    a.click();
-  });
-}
-
-function renderChart() {
-  const ctx = document.getElementById('spendingChart').getContext('2d');
   new Chart(ctx, {
     type: 'bar',
     data: {
-      labels: days,
+      labels: labels,
       datasets: [{
-        label: 'Daily Meal Cost',
-        data: days.map(day => dailyTotals[day]),
-        backgroundColor: '#4CAF50',
-        borderRadius: 6,
+        label: "Daily Spending (KES)",
+        data: data,
+        backgroundColor: "#27ae60",
       }]
     },
     options: {
-      responsive: true,
-      plugins: {
-        legend: { display: false },
-        title: {
-          display: true,
-          text: 'Weekly Spending Overview',
-          font: { size: 18 }
-        }
-      },
-      scales: {
-        y: {
-          beginAtZero: true,
-          ticks: {
-            callback: value => `$${value}`
-          }
-        }
-      }
+      responsive: false,
+      animation: false
     }
   });
-}
 
-setInterval(renderChart, 5000);
+  await new Promise(resolve => setTimeout(resolve, 500)); // wait for chart to render
+
+  const imgData = chartCanvas.toDataURL("image/png");
+
+  const doc = new docx.Document();
+  const { Paragraph, TextRun, Packer, Media } = docx;
+
+  const children = [];
+
+  allData.forEach(day => {
+    children.push(new Paragraph({ text: day.day, heading: "Heading1" }));
+    day.meals.forEach(meal => {
+      children.push(new Paragraph(`${meal.type}: ${meal.description} - ${meal.cost} KES`));
+    });
+    children.push(new Paragraph(`Total: ${day.total} KES`));
+    children.push(new Paragraph(""));
+  });
+
+  const chartImage = Media.addImage(doc, imgData);
+  children.push(new Paragraph("Spending Chart:"));
+  children.push(chartImage);
+
+  doc.addSection({ children });
+
+  const blob = await Packer.toBlob(doc);
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `Meal_Report_${new Date().toISOString().slice(0,10)}.docx`;
+  a.click();
+}
