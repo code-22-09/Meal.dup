@@ -3,27 +3,24 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>My Meal Tracker</title>
+  <title>Weekly Meal Tracker</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <header>
     <h1>Weekly Meal Tracker</h1>
     <div class="export-buttons">
-      <button onclick="exportTXT()">Export as TXT</button>
-      <button onclick="exportDOCX()">Export as DOCX</button>
+      <button onclick="exportTXT()">Export TXT</button>
+      <button onclick="exportDOCX()">Export DOCX</button>
     </div>
   </header>
 
   <main id="daysContainer"></main>
-  <div class="center">
-    <button onclick="addDay()">➕ Next Day</button>
-  </div>
 
-  <canvas id="spendingChart" style="display:none; width:100%; max-width:400px;"></canvas>
+  <canvas id="spendingChart" style="display:none;"></canvas>
 
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/docx/8.0.3/docx.umd.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/docx/8.0.3/docx.umd.min.js"></script>
   <script src="script.js"></script>
 </body>
 </html>
