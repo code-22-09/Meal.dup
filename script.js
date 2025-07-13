@@ -1,98 +1,112 @@
-let currentDay = 1;
+const weekdays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 const meals = ["Breakfast", "Lunch", "Mid-afternoon", "Supper"];
 let allData = [];
 
-function addDay() {
+document.addEventListener("DOMContentLoaded", () => {
   const container = document.getElementById("daysContainer");
+  weekdays.forEach((day, i) => {
+    const section = document.createElement("div");
+    section.className = "day-section";
+    section.id = `day-${day}`;
 
-  const dayDiv = document.createElement("div");
-  dayDiv.className = "day-section";
-  dayDiv.id = `day-${currentDay}`;
+    const heading = document.createElement("h2");
+    heading.textContent = day;
+    section.appendChild(heading);
 
-  const header = document.createElement("h2");
-  header.textContent = `Day ${currentDay}`;
-  dayDiv.appendChild(header);
+    meals.forEach(meal => {
+      const row = document.createElement("div");
+      row.className = "meal-row";
 
-  meals.forEach(meal => {
-    const mealGroup = document.createElement("div");
-    mealGroup.className = "meal-group";
+      const label = document.createElement("label");
+      label.textContent = meal;
 
-    const label = document.createElement("label");
-    label.textContent = `${meal}:`;
+      const desc = document.createElement("input");
+      desc.placeholder = `${meal} description`;
+      desc.className = "desc";
+      desc.dataset.day = day;
+      desc.dataset.meal = meal;
 
-    const input = document.createElement("input");
-    input.type = "text";
-    input.placeholder = `Enter ${meal} + cost (e.g. Rice - 120)`;
-    input.dataset.meal = meal;
-    input.dataset.day = currentDay;
+      const cost = document.createElement("input");
+      cost.placeholder = "Cost (KES)";
+      cost.className = "cost";
+      cost.type = "number";
+      cost.dataset.day = day;
+      cost.dataset.meal = meal;
 
-    mealGroup.appendChild(label);
-    mealGroup.appendChild(input);
-    dayDiv.appendChild(mealGroup);
+      row.appendChild(label);
+      row.appendChild(desc);
+      row.appendChild(cost);
+      section.appendChild(row);
+    });
+
+    const saveBtn = document.createElement("button");
+    saveBtn.textContent = "Save Meals";
+    saveBtn.className = "save-btn";
+    saveBtn.onclick = () => saveDay(day);
+    section.appendChild(saveBtn);
+
+    container.appendChild(section);
   });
+});
 
-  const addBtn = document.createElement("button");
-  addBtn.textContent = "Add Meal";
-  addBtn.className = "add-btn";
-  addBtn.onclick = () => saveDayData(currentDay);
-  dayDiv.appendChild(addBtn);
+function saveDay(day) {
+  const descs = document.querySelectorAll(`.desc[data-day="${day}"]`);
+  const costs = document.querySelectorAll(`.cost[data-day="${day}"]`);
 
-  container.appendChild(dayDiv);
-  currentDay++;
-}
+  const mealsList = [];
+  let total = 0;
 
-function saveDayData(day) {
-  const inputs = document.querySelectorAll(`input[data-day='${day}']`);
-  const dayData = { day: `Day ${day}`, meals: [], total: 0 };
+  for (let i = 0; i < descs.length; i++) {
+    const description = descs[i].value.trim();
+    const cost = parseFloat(costs[i].value) || 0;
+    mealsList.push({
+      type: descs[i].dataset.meal,
+      description,
+      cost
+    });
+    total += cost;
+  }
 
-  inputs.forEach(input => {
-    const value = input.value.trim();
-    if (value) {
-      const [desc, cost] = value.split("-").map(str => str.trim());
-      const amount = parseFloat(cost) || 0;
-      dayData.meals.push({ type: input.dataset.meal, description: desc, cost: amount });
-      dayData.total += amount;
-    }
-  });
+  allData = allData.filter(d => d.day !== day);
+  allData.push({ day, meals: mealsList, total });
 
-  allData = allData.filter(d => d.day !== `Day ${day}`);
-  allData.push(dayData);
-  alert(`Saved Day ${day} Meals ✅`);
+  alert(`${day} meals saved ✅`);
 }
 
 function exportTXT() {
-  let content = "";
-  allData.forEach(day => {
-    content += `${day.day}\n`;
-    day.meals.forEach(meal => {
-      content += `  ${meal.type}: ${meal.description} - ${meal.cost} KES\n`;
+  let text = "";
+
+  allData.forEach(d => {
+    text += `${d.day}:\n`;
+    d.meals.forEach(m => {
+      text += `  ${m.type}: ${m.description} - ${m.cost} KES\n`;
     });
-    content += `  Total: ${day.total} KES\n\n`;
+    text += `  Total: ${d.total} KES\n\n`;
   });
 
-  const blob = new Blob([content], { type: "text/plain" });
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = `Meal_Report_${new Date().toISOString().slice(0,10)}.txt`;
-  a.click();
+  const blob = new Blob([text], { type: "text/plain" });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = `Meal_Report_${new Date().toISOString().slice(0,10)}.txt`;
+  link.click();
 }
 
 async function exportDOCX() {
-  const chartCanvas = document.getElementById("spendingChart");
-  const ctx = chartCanvas.getContext("2d");
-  chartCanvas.style.display = "block";
+  const chart = document.getElementById("spendingChart");
+  chart.style.display = "block";
+  const ctx = chart.getContext("2d");
 
   const labels = allData.map(d => d.day);
-  const data = allData.map(d => d.total);
+  const costs = allData.map(d => d.total);
 
   new Chart(ctx, {
     type: 'bar',
     data: {
-      labels: labels,
+      labels,
       datasets: [{
-        label: "Daily Spending (KES)",
-        data: data,
-        backgroundColor: "#27ae60",
+        label: "Spending (KES)",
+        data: costs,
+        backgroundColor: "#2980b9"
       }]
     },
     options: {
@@ -101,33 +115,32 @@ async function exportDOCX() {
     }
   });
 
-  await new Promise(resolve => setTimeout(resolve, 500)); // wait for chart to render
+  await new Promise(r => setTimeout(r, 500)); // wait to render
 
-  const imgData = chartCanvas.toDataURL("image/png");
-
+  const chartImg = chart.toDataURL("image/png");
   const doc = new docx.Document();
-  const { Paragraph, TextRun, Packer, Media } = docx;
+  const { Paragraph, Packer, Media } = docx;
 
   const children = [];
 
   allData.forEach(day => {
     children.push(new Paragraph({ text: day.day, heading: "Heading1" }));
-    day.meals.forEach(meal => {
-      children.push(new Paragraph(`${meal.type}: ${meal.description} - ${meal.cost} KES`));
+    day.meals.forEach(m => {
+      children.push(new Paragraph(`${m.type}: ${m.description} - ${m.cost} KES`));
     });
     children.push(new Paragraph(`Total: ${day.total} KES`));
     children.push(new Paragraph(""));
   });
 
-  const chartImage = Media.addImage(doc, imgData);
+  const image = Media.addImage(doc, chartImg);
   children.push(new Paragraph("Spending Chart:"));
-  children.push(chartImage);
+  children.push(image);
 
   doc.addSection({ children });
 
   const blob = await Packer.toBlob(doc);
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = `Meal_Report_${new Date().toISOString().slice(0,10)}.docx`;
-  a.click();
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = `Meal_Report_${new Date().toISOString().slice(0,10)}.docx`;
+  link.click();
 }
